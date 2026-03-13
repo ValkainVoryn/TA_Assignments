@@ -1,0 +1,50 @@
+{
+  "prefix": {
+    "target": "T",
+    "naming_conventions": ["T", "TX"]
+  },
+  "suffix": {
+    "Base":
+    {
+      "target": "BC",
+      "naming_conventions": ["BC", "ALB", "A"]
+    },
+    "packing": {
+      "target": "ARM",
+      "channels": {
+        "R": "AO",
+        "G": "R",
+        "B": "M"
+      },
+    "naming_conventions": {
+      "AORO": {
+        "channels": {
+          "R": "AO",
+          "G": "M",
+          "B": "R"
+        }
+      },
+      "AORM": {
+        "channels": {
+          "R": "AO",
+          "G": "R",
+          "B": "M"
+        }
+      },
+      "RMA": {
+        "channels": {
+          "R": "R",
+          "G": "M",
+          "B": "AO"
+        }
+      }
+    },
+    "separate_maps": {
+      "AO": "AO",
+      "A": "AO",
+      "R": "R",
+      "M": "M"
+    }
+  }
+    }
+}
