@@ -3,6 +3,7 @@ Utility module for loading Qt Designer UI files.
 """
 from PySide6.QtUiTools import QUiLoader
 
+
 def load_ui(ui_filename: str, parent=None):
     """
     Loads a Qt Designer XML file and returns the widget.

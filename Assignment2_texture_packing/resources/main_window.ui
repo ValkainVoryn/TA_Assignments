@@ -51,10 +51,10 @@
     </layout>
    </item>
    <item row="1" column="0">
-    <widget class="QPlainTextEdit" name="plainTextEdit"/>
+    <widget class="QPlainTextEdit" name="text_texture_files"/>
    </item>
    <item row="1" column="1">
-    <widget class="QPlainTextEdit" name="plainTextEdit_2"/>
+    <widget class="QPlainTextEdit" name="text_texture_made"/>
    </item>
    <item row="2" column="0">
     <widget class="QPushButton" name="btn_apply">

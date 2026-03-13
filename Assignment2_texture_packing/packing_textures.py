@@ -18,32 +18,48 @@ from core.worker import DownloadWorker
 # TODO: default packing standard (eg. _RMA or _ORM)
 
 
-class TexturePacker(QMainWindow):
+class TexturePackerApp(QMainWindow):
     def __init__(self):
         super().__init__()
 
         # load ui
-        self.ui = load_ui("Resources/main_window.ui", self)
+        self.ui = load_ui("resources/main_window.ui", self)
         self.setCentralWidget(self.ui)
         self.setWindowTitle("Texture Packer")
 
         # init all parts of widget
-        self.btn_browse_folder: QPushButton = self.btn_browse_folder
-        self.btn_browse_save: QPushButton = self.btn_browse_save
-        self.btn_apply: QPushButton = self.btn_apply
-        self.btn_cancel: QPushButton = self.btn_cancel
-        self.line_texture_path: QLineEdit = self.line_texture_path
-        self.line_save_path: QLineEdit = self.line_save_path
-        self.text_texture_files: QPlainTextEdit = self.text_texture_files
-        self.text_texture_made: QPlainTextEdit = self.text_texture_made
+        self.btn_browse_folder: QPushButton = self.ui.btn_browse_folder
+        self.btn_browse_save: QPushButton = self.ui.btn_browse_save
+        self.btn_apply: QPushButton = self.ui.btn_apply
+        self.btn_cancel: QPushButton = self.ui.btn_cancel
+
+        self.line_texture_paths: QLineEdit = self.ui.line_texture_paths
+        self.line_save_path: QLineEdit = self.ui.line_save_path
+
+        self.text_texture_files: QPlainTextEdit = self.ui.text_texture_files
+        self.text_texture_made: QPlainTextEdit = self.ui.text_texture_made
 
         # connect to function
-        self.btn_browse_folder.clicked.connect(self.browse_folder("texture", QLineEdit(self.btn_browse_folder)))
-        self.btn_browse_save.clicked.connect(self.browse_folder("save", QLineEdit(self.btn_browse_save)))
+        self.btn_browse_folder.clicked.connect(self.browse_folder_for_textures())
+        # self.btn_browse_save.clicked.connect
 
-    def browse_folder(self, selection_name: str, path: QLineEdit):
+        # Load saved path from config_manager
 
-        folder = QFileDialog.getExistingDirectory(self, f"Select {selection_name} Directory")
+        config = config_manager.load_config()
+        saved_path = config.get("last_save_path", "")
+        if saved_path and os.path.isdir(saved_path):
+            self.line_save_path.setText(saved_path)
+
+    def browse_folder_for_textures(self):
+        folder = QFileDialog.getExistingDirectory(self, "Select Texture Directory")
+        # this is a folder picker
         if folder:
-            path.setText(folder)
-        config_manager.save_config({f"last_{selection_name}_path": folder})
+            self.line_texture_paths.setText(folder)
+            config_manager.save_config({"last_save_path": folder})
+
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = TexturePackerApp()
+    window.show()
+    sys.exit(app.exec())
