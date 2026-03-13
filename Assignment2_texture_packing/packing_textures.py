@@ -10,9 +10,12 @@ from PySide6.QtCore import Qt
 
 from utils.ui_loader import load_ui
 from core import config_manager
+from PIL import Image
+from pathlib import Path
 from core.worker import DownloadWorker
 
 # TODO: create pyside for UE5 that allows the user to load all textures from a selected folder
+# filter files only for images
 # TODO: have dropdown menu that suggests presets based off naming conventions (eg. _AO)
 # TODO: "no match found" if no conventions can be found to pack with (allow user to do manually)
 # TODO: default packing standard (eg. _RMA or _ORM)
@@ -33,15 +36,15 @@ class TexturePackerApp(QMainWindow):
         self.btn_apply: QPushButton = self.ui.btn_apply
         self.btn_cancel: QPushButton = self.ui.btn_cancel
 
-        self.line_texture_paths: QLineEdit = self.ui.line_texture_paths
+        self.line_texture_path: QLineEdit = self.ui.line_texture_path
         self.line_save_path: QLineEdit = self.ui.line_save_path
 
         self.text_texture_files: QPlainTextEdit = self.ui.text_texture_files
         self.text_texture_made: QPlainTextEdit = self.ui.text_texture_made
 
         # connect to function
-        self.btn_browse_folder.clicked.connect(self.browse_folder_for_textures())
-        # self.btn_browse_save.clicked.connect
+        self.btn_browse_folder.clicked.connect(self.browse_folder_for_textures)
+        self.btn_browse_save.clicked.connect(self.browse_folder_for_save)
 
         # Load saved path from config_manager
 
@@ -54,7 +57,22 @@ class TexturePackerApp(QMainWindow):
         folder = QFileDialog.getExistingDirectory(self, "Select Texture Directory")
         # this is a folder picker
         if folder:
-            self.line_texture_paths.setText(folder)
+            self.line_texture_path.setText(folder)
+            config_manager.save_config({"last_texture_path": folder})
+        src_path = Path(folder)
+
+        extensions = Image.registered_extensions().keys()
+        l_img_paths: list[Path] = []
+        for path in src_path.rglob("*"):
+            if path.suffix.lower() in extensions:
+                l_img_paths.append(path)
+        return l_img_paths
+
+    def browse_folder_for_save(self):
+        folder = QFileDialog.getExistingDirectory(self, "Select Save Directory")
+        # this is a folder picker
+        if folder:
+            self.line_save_path.setText(folder)
             config_manager.save_config({"last_save_path": folder})
 
 
