@@ -1,0 +1,30 @@
+name: Autograding Tests
+'on':
+- push
+- repository_dispatch
+permissions:
+  checks: write
+  actions: read
+  contents: read
+jobs:
+  run-autograding-tests:
+    runs-on: ubuntu-latest
+    if: github.actor != 'github-classroom[bot]'
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Syntax Check
+      id: syntax-check
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: Syntax Check
+        setup-command: pip install flake8
+        command: flake8 . --select=E9,F63,F7,F82 --show-source --statistics
+        timeout: 10
+        max-score: 1
+    - name: Autograding Reporter
+      uses: classroom-resources/autograding-grading-reporter@v1
+      env:
+        SYNTAX-CHECK_RESULTS: "${{steps.syntax-check.outputs.result}}"
+      with:
+        runners: syntax-check
