@@ -37,6 +37,13 @@
           "G": "M",
           "B": "AO"
         }
+      },
+      "ORM": {
+        "channels": {
+          "R": "AO",
+          "G": "R",
+          "B": "M"
+        }
       }
     },
     "separate_maps": {

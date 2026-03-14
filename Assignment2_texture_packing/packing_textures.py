@@ -127,10 +127,13 @@ class TexturePackerApp(QMainWindow):
 
     def apply_and_export(self):
         paths = []
+        # get all paths stored in Qwidget
         for i in range(self.list_texture_files.count()):
             item = self.list_texture_files.item(i)
             temp_path = item.data(Qt.ItemDataRole.UserRole)
             paths.append(temp_path)
+
+        export_mode = self.cb_export.currentText()
         if self.cb_export.currentIndex() == 0:
             print("RMA")
             self.process_images(paths, self.config_repack)
@@ -148,21 +151,26 @@ class TexturePackerApp(QMainWindow):
         :param config: .json config file
         :return: None
         """
+        packed_images = {}
+        separate_maps = {}
+        base_images = []
         for img_path in list_image_path:
             prefix, name, suffix, ext = parse_name(img_path.name, config)
 
             if suffix in config["suffix"]["Base"]["naming_conventions"]:
-                print(f"File is in color: {img_path}")
-                pass
+                base_images.append(img_path)
+
             elif suffix in config["suffix"]["packing"]["naming_conventions"].keys():
-                # print(f"File is a channel/grey packed image {img_path}")
+                packed_images[name] = {
+                    "path": img_path,
+                    "type": suffix
+                }
                 pass
             elif suffix in config["suffix"]["packing"]["separate_maps"].keys():
                 # print(f"Files is an single channel image: {img_path}")
                 pass
             else:
-                # print(f"OTHER: File is something else: {img_path}")
-                pass
+                print(f"OTHER: File is something else: {img_path}")
 
     def prefix_based_packing(self):
         pass
