@@ -23,3 +23,18 @@ def save_config(data_dict: dict) -> None:
     """
     with open(CONFIG_FILE, "w") as f:
         json.dump(data_dict, f, indent=4)
+
+
+def replace_config(data_dict: dict) -> None:
+    existing_data = load_config()
+
+    for key, value in data_dict.items():
+        if key in existing_data:
+            existing_data[key] = value
+        else:
+            existing_data.update(value)
+
+    with open(CONFIG_FILE, "w") as f:
+        json.dump(existing_data, f, indent=4)
+
+    # config_manager.save_config({"last_save_path": folder})
