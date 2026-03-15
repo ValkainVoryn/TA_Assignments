@@ -1,40 +1,43 @@
 import json
 
-CONFIG_FILE = "config.json"
+CONFIG_SAVE_FILE = "config_save.json"
+CONFIG_TEXTURE_FILE = "config_texture.json"
 
 
-def load_config() -> dict:
+def load_save_config() -> dict:
     """
     loads user config from a JSON file
     :return: dictionary or None if not found
     """
     try:
-        with open(CONFIG_FILE, "r")as f:
+        with open(CONFIG_SAVE_FILE, "r")as f:
             return json.load(f)
     except FileNotFoundError:
         return {}
 
 
-def save_config(data_dict: dict) -> None:
+def load_texture_config() -> dict:
+    """
+    loads user config from a JSON file
+    :return: dictionary or None if not found
+    """
+    try:
+        with open(CONFIG_TEXTURE_FILE, "r")as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {}
+
+
+def save_config(data_dict: dict, nr: int) -> None:
     """
     saves a configuration to a local JSON file
     :param data_dict: dictionary of save data with keys being UI elements
+    :param nr: used to control which json to save to
     :return: None
     """
-    with open(CONFIG_FILE, "w") as f:
-        json.dump(data_dict, f, indent=4)
-
-
-def replace_config(data_dict: dict) -> None:
-    existing_data = load_config()
-
-    for key, value in data_dict.items():
-        if key in existing_data:
-            existing_data[key] = value
-        else:
-            existing_data.update(value)
-
-    with open(CONFIG_FILE, "w") as f:
-        json.dump(existing_data, f, indent=4)
-
-    # config_manager.save_config({"last_save_path": folder})
+    if nr <= 0:
+        with open(CONFIG_SAVE_FILE, "w") as f:
+            json.dump(data_dict, f, indent=4)
+    if nr > 0:
+        with open(CONFIG_TEXTURE_FILE, "w") as f:
+            json.dump(data_dict, f, indent=4)

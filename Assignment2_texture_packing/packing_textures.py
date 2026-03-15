@@ -19,6 +19,7 @@ from repack import load_json, parse_name
 # TODO: create pyside for UE5 that allows the user to load all textures from a selected folder
 # DONE
 # TODO: have dropdown menu that suggests presets based off naming conventions (eg. _AO)
+# DONE
 # TODO: "no match found" if no conventions can be found to pack with (allow user to do manually)
 # TODO: default packing standard (eg. _RMA or _ORM)
 
@@ -50,19 +51,26 @@ class TexturePackerApp(QMainWindow):
         self.btn_browse_save.clicked.connect(self.browse_folder_for_save)
         self.btn_apply.clicked.connect(self.apply_and_export)
 
-        # Load saved path from config_manager
+        # Load paths from config_manager
 
-        config = config_manager.load_config()
-        saved_save_path = config.get("last_save_path", "")
+        save_config = config_manager.load_save_config()
+        saved_save_path = save_config.get("last_save_path", "")
         if saved_save_path and os.path.isdir(saved_save_path):
             self.line_save_path.setText(saved_save_path)
-
-        saved_texture_path = config.get("last_texture_path", "")
+        texture_config = config_manager.load_texture_config()
+        saved_texture_path = texture_config.get("last_texture_path", "")
         if saved_texture_path and os.path.isdir(saved_texture_path):
             self.line_texture_path.setText(saved_texture_path)
 
+        # if saved texture path exists already load in textures from folder
         if saved_texture_path is not None:
             self.open_texture_folder_at_start()
+            # loads in what texture groups may look like
+            for material in self.process_images(self.get_paths_from_list(), self.config_repack):
+                self.text_texture_made.appendPlainText(f"{material}_{self.cb_export.currentText()}.png")
+
+        # check if paths to save and texture both exist
+        self.check_if_apply_is_valid()
 
     def browse_folder_for_textures(self):
         """
@@ -74,16 +82,24 @@ class TexturePackerApp(QMainWindow):
         # this is a folder picker
         if folder:
             self.line_texture_path.setText(folder)
-            config_manager.save_config({"last_texture_path": folder})
+            config_manager.save_config({"last_texture_path": folder}, 1)
 
+            # checks for legit image extensions (eg .png)
             extensions = Image.registered_extensions().keys()
             src_path = Path(folder)
             for path in src_path.rglob("*"):
                 if path.suffix.lower() in extensions:
+                    # creates key
                     item = QListWidgetItem(path.name)
+                    # sets value for key
                     item.setData(Qt.ItemDataRole.UserRole, path)
                     self.list_texture_files.addItem(item)
 
+        # loads in texture names for preview
+        for material in self.process_images(self.get_paths_from_list(), self.config_repack):
+            self.text_texture_made.appendPlainText(f"{material}_{self.cb_export.currentText()}.png")
+
+        # if button clicked check if paths to save and texture both exist
         self.check_if_apply_is_valid()
 
     def open_texture_folder_at_start(self):
@@ -91,7 +107,7 @@ class TexturePackerApp(QMainWindow):
 
         # this is a folder picker
         if folder:
-            config_manager.save_config({"last_texture_path": folder})
+            config_manager.save_config({"last_texture_path": folder}, 1)
 
             extensions = Image.registered_extensions().keys()
             src_path = Path(folder)
@@ -100,8 +116,6 @@ class TexturePackerApp(QMainWindow):
                     item = QListWidgetItem(path.name)
                     item.setData(Qt.ItemDataRole.UserRole, path)
                     self.list_texture_files.addItem(item)
-
-        self.check_if_apply_is_valid()
 
     def browse_folder_for_save(self):
         """
@@ -112,8 +126,9 @@ class TexturePackerApp(QMainWindow):
         # this is a folder picker
         if folder:
             self.line_save_path.setText(folder)
-            config_manager.save_config({"last_save_path": folder})
+            config_manager.save_config({"last_save_path": folder}, 0)
 
+        # if button clicked check if paths to save and texture both exist
         self.check_if_apply_is_valid()
 
     def check_if_apply_is_valid(self):
@@ -126,54 +141,87 @@ class TexturePackerApp(QMainWindow):
         self.btn_apply.setEnabled(valid_save_dir and valid_texture_dir)
 
     def apply_and_export(self):
+        paths = self.get_paths_from_list()
+        materials = self.process_images(paths, self.config_repack)
+        self.prefix_based_packing(materials, self.config_repack)
+
+    def get_paths_from_list(self) -> list[Path]:
+        """
+        get all paths from list_texture_files
+        :return: list of Path
+        """
         paths = []
         # get all paths stored in Qwidget
         for i in range(self.list_texture_files.count()):
             item = self.list_texture_files.item(i)
             temp_path = item.data(Qt.ItemDataRole.UserRole)
-            paths.append(temp_path)
 
-        export_mode = self.cb_export.currentText()
-        if self.cb_export.currentIndex() == 0:
-            print("RMA")
-            self.process_images(paths, self.config_repack)
-        elif self.cb_export.currentIndex() == 1:
-            print("ORM")
-        else:
-            print("option doesn't exist yet")
-            # I know I could just do else instead of elif, but this could be handy if you want-
-            # to add more options later
+            if Path:
+                paths.append(temp_path)
+        return paths
 
-    def process_images(self, list_image_path: list[Path], config: dict) -> None:
+    def process_images(self, list_image_path: list[Path], config: dict) -> dict:
         """
         process images rename and repack
         :param list_image_path: paths of image
         :param config: .json config file
-        :return: None
+        :return: dict of materials
         """
-        packed_images = {}
-        separate_maps = {}
-        base_images = []
+        materials = {}
+
         for img_path in list_image_path:
             prefix, name, suffix, ext = parse_name(img_path.name, config)
 
-            if suffix in config["suffix"]["Base"]["naming_conventions"]:
-                base_images.append(img_path)
-
-            elif suffix in config["suffix"]["packing"]["naming_conventions"].keys():
-                packed_images[name] = {
-                    "path": img_path,
-                    "type": suffix
+            # if key doesn't exist yet, make new
+            if name not in materials:
+                materials[name] = {
+                    "maps": {}
                 }
-                pass
+
+            # BC, A
+            if suffix in config["suffix"]["Base"]["naming_conventions"]:
+                materials[name]["base"] = img_path
+
+            # packed
+            elif suffix in config["suffix"]["packing"]["naming_conventions"].keys():
+                materials[name]["packed"] = img_path
+
+            # needs to be packed
             elif suffix in config["suffix"]["packing"]["separate_maps"].keys():
-                # print(f"Files is an single channel image: {img_path}")
-                pass
+                map_type = config["suffix"]["packing"]["separate_maps"][suffix]
+                materials["name"]["maps"][map_type][suffix] = img_path
+
             else:
                 print(f"OTHER: File is something else: {img_path}")
 
-    def prefix_based_packing(self):
-        pass
+        return materials
+
+    def prefix_based_packing(self, materials: dict, config: dict):
+        # all maps
+        for material, data in materials.items():
+
+            # skip if already packed
+            if "packed" in data:
+                continue
+
+            maps = data["maps"]
+            if not maps:
+                continue
+
+            ao = Image.open(maps["AO"]).convert("L")
+            rough = Image.open(maps["R"]).convert("L")
+            metal = Image.open(maps["M"]).convert("L")
+            packed = Image
+
+            if self.cb_export.currentText() == "ORM":
+                packed = Image.merge("RGB", (ao, rough, metal))
+            elif self.cb_export.currentText() == "RMA":
+                packed = Image.merge("RGB", (rough, metal, ao))
+
+            safe_folder = Path(self.line_save_path.text())
+
+            save_path = safe_folder / f"{material}_{self.cb_export.currentText()}.png"
+            packed.save(save_path)
 
 
 if __name__ == "__main__":
